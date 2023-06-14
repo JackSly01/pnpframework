@@ -84,7 +84,7 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
             // remove list tokens
             if (tokenIds.Contains("listid") || tokenIds.Contains("listurl") || tokenIds.Contains("viewid") || tokenIds.Contains("listcontenttypeid"))
             {
-                RebuildListTokens(web);
+                RebuildListTokens(web, template.Lists);
             }
             // remove content type tokens
             if (tokenIds.Contains("contenttypeid"))
@@ -249,7 +249,7 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
                 _tokens.Add(new EveryoneButExternalUsersToken(web));
 
             if (tokenIds.Contains("listid") || tokenIds.Contains("listurl") || tokenIds.Contains("viewid"))
-                RebuildListTokens(web);
+                RebuildListTokens(web, template.Lists);
             if (tokenIds.Contains("contenttypeid"))
                 AddContentTypeTokens(web);
 
@@ -743,7 +743,7 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
             }
         }
 
-        internal void RebuildListTokens(Web web)
+        internal void RebuildListTokens(Web web, ListInstanceCollection lists = null)
         {
             web.EnsureProperties(w => w.ServerRelativeUrl, w => w.Language);
 
@@ -763,27 +763,28 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
             }
             _tokens.RemoveAll(listTokenTypes);
 
-            web.Context.Load(web.Lists, ls => ls.Include(l => l.Id, l => l.Title, l => l.RootFolder.ServerRelativeUrl, l => l.Views, l => l.ContentTypes, l => l.TitleResource));
-            web.Context.ExecuteQueryRetry();
-            foreach (var list in web.Lists)
+            if (lists != null)
             {
-                _tokens.Add(new ListIdToken(web, list.Title, list.Id));
-                // _tokens.Add(new ListIdToken(web, list.Title, Guid.Empty));
-                var mainLanguageName = GetListTitleForMainLanguage(web, list.Title);
-                if (!string.IsNullOrWhiteSpace(mainLanguageName) && mainLanguageName != list.Title)
+                foreach (var listToLoad in lists)
                 {
-                    _tokens.Add(new ListIdToken(web, mainLanguageName, list.Id));
-                }
-                _tokens.Add(new ListUrlToken(web, list.Title, list.RootFolder.ServerRelativeUrl.Substring(web.ServerRelativeUrl.TrimEnd(new char[] { '/' }).Length + 1)));
+                    var list = web.GetListByUrl(listToLoad.Url);
+                    web.Context.Load(list, l => l.Id, l => l.Title, l => l.RootFolder.ServerRelativeUrl, l => l.Views, l => l.ContentTypes, l => l.TitleResource);
+                    web.Context.ExecuteQueryRetry();
 
-                foreach (var view in list.Views)
-                {
-                    _tokens.Add(new ListViewIdToken(web, list.Title, view.Title, view.Id));
-                }
+                    if (list == null)
+                        continue;
 
-                foreach (var contentType in list.ContentTypes)
+                    AddListToken(list, web);
+                }
+            }
+            else
+            {
+                web.Context.Load(web.Lists, ls => ls.Include(l => l.Id, l => l.Title, l => l.RootFolder.ServerRelativeUrl, l => l.Views, l => l.ContentTypes, l => l.TitleResource));
+                web.Context.ExecuteQueryRetry();
+
+                foreach (var list in web.Lists)
                 {
-                    _tokens.Add(new ListContentTypeIdToken(web, list.Title, contentType));
+                    AddListToken(list, web);
                 }
             }
 
@@ -811,6 +812,28 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
             }
         }
 
+        private void AddListToken(List list, Web web)
+        {
+
+            _tokens.Add(new ListIdToken(web, list.Title, list.Id));
+
+            var mainLanguageName = GetListTitleForMainLanguage(web, list.Title);
+            if (!string.IsNullOrWhiteSpace(mainLanguageName) && mainLanguageName != list.Title)
+            {
+                _tokens.Add(new ListIdToken(web, mainLanguageName, list.Id));
+            }
+            _tokens.Add(new ListUrlToken(web, list.Title, list.RootFolder.ServerRelativeUrl.Substring(web.ServerRelativeUrl.TrimEnd(new char[] { '/' }).Length + 1)));
+
+            foreach (var view in list.Views)
+            {
+                _tokens.Add(new ListViewIdToken(web, list.Title, view.Title, view.Id));
+            }
+
+            foreach (var contentType in list.ContentTypes)
+            {
+                _tokens.Add(new ListContentTypeIdToken(web, list.Title, contentType));
+            }
+        }
         /// <summary>
         /// Gets list of token resource values
         /// </summary>
@@ -1167,16 +1190,18 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
                 {
                     // Reset the cache of lists titles
                     TokenParser.listsTitles.Clear();
+                    
+                    var mainList = web.Lists.GetByTitle(name);
+                    var titleResource = mainList.TitleResource.GetValueForUICulture(ci.Name);
+                    web.Context.Load(mainList, fields=> fields.Title);
+                    web.Context.ExecuteQueryRetry();
 
-                    // Add the new lists title using the main language of the site
-                    foreach (var list in web.Lists)
+                    if (mainList == null)
+                        return (null);
+
+                    if (!TokenParser.listsTitles.ContainsKey(mainList.Title))
                     {
-                        var titleResource = list.TitleResource.GetValueForUICulture(ci.Name);
-                        web.Context.ExecuteQueryRetry();
-                        if (!TokenParser.listsTitles.ContainsKey(list.Title))
-                        {
-                            TokenParser.listsTitles.Add(list.Title, titleResource.Value);
-                        }
+                        TokenParser.listsTitles.Add(mainList.Title, titleResource.Value);
                     }
                 }
 

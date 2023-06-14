@@ -187,7 +187,7 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
                     // We stop here unless we reached the last provisioning stop of the list
                     if (step == FieldAndListProvisioningStepHelper.Step.ListSettings)
                     {
-                        parser.RebuildListTokens(web);
+                        parser.RebuildListTokens(web, template.Lists);
 
                         #region Default Field Values
 
@@ -205,7 +205,7 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
                             ProcessViews(web, listInfo.TokenParser ?? parser, scope, listInfo);
                         }
 
-                        parser.RebuildListTokens(web);
+                        parser.RebuildListTokens(web, template.Lists);
 
                         #endregion Views
 
