@@ -84,7 +84,7 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
             // remove list tokens
             if (tokenIds.Contains("listid") || tokenIds.Contains("listurl") || tokenIds.Contains("viewid") || tokenIds.Contains("listcontenttypeid"))
             {
-                RebuildListTokens(web, template.Lists);
+                RebuildListTokens(web, template.Scope == ProvisioningTemplateScope.List ? template.Lists : null);
             }
             // remove content type tokens
             if (tokenIds.Contains("contenttypeid"))
@@ -249,7 +249,7 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
                 _tokens.Add(new EveryoneButExternalUsersToken(web));
 
             if (tokenIds.Contains("listid") || tokenIds.Contains("listurl") || tokenIds.Contains("viewid"))
-                RebuildListTokens(web, template.Lists);
+                RebuildListTokens(web, template.Scope == ProvisioningTemplateScope.List ? template.Lists : null);
             if (tokenIds.Contains("contenttypeid"))
                 AddContentTypeTokens(web);
 
@@ -768,11 +768,11 @@ namespace PnP.Framework.Provisioning.ObjectHandlers
                 foreach (var listToLoad in lists)
                 {
                     var list = web.GetListByUrl(listToLoad.Url);
-                    web.Context.Load(list, l => l.Id, l => l.Title, l => l.RootFolder.ServerRelativeUrl, l => l.Views, l => l.ContentTypes, l => l.TitleResource);
-                    web.Context.ExecuteQueryRetry();
-
                     if (list == null)
                         continue;
+
+                    web.Context.Load(list, l => l.Id, l => l.Title, l => l.RootFolder.ServerRelativeUrl, l => l.Views, l => l.ContentTypes, l => l.TitleResource);
+                    web.Context.ExecuteQueryRetry();
 
                     AddListToken(list, web);
                 }

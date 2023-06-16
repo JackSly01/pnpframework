@@ -918,5 +918,6 @@ namespace PnP.Framework.Provisioning.Model
         /// The scope is a child Web of a Site Collection
         /// </summary>
         Web,
+        List,
     }
 }

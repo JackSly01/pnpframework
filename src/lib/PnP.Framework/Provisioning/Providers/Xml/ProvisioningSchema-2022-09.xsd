@@ -1619,6 +1619,13 @@
               </xsd:documentation>
             </xsd:annotation>
           </xsd:enumeration>
+			<xsd:enumeration value="List">
+				<xsd:annotation>
+					<xsd:documentation xml:lang="en">
+						The scope is List/Library definition only
+					</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
         </xsd:restriction>
       </xsd:simpleType>
 

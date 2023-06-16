@@ -13241,9 +13241,12 @@ namespace PnP.Framework.Provisioning.Providers.Xml.V202209 {
         
         /// <remarks/>
         RootSite,
-        
+
         /// <remarks/>
         Web,
+
+        /// <remarks/>
+        List,
     }
     
     /// <remarks/>
